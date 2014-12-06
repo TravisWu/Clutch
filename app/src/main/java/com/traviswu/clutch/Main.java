@@ -19,12 +19,17 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.UnsupportedEncodingException;
+import android.net.Uri;
+
+import java.net.URI;
+import android.net.Uri;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -34,8 +39,10 @@ import android.content.IntentFilter;
 public class Main extends Activity {
 
     EditText editName, editNumber, editEmail;
+    ImageView contactImageImgView;
     List<Contact> Contacts = new ArrayList<Contact>();
     ListView contactListView;
+    Uri imageUri = null;
 
     public static final String MIME_TEXT_PLAIN = "text/plain";
     public static final String TAG = "ClutchNFC";
@@ -51,6 +58,7 @@ public class Main extends Activity {
         editNumber = (EditText) findViewById(R.id.editNumber);
         editEmail = (EditText) findViewById(R.id.editEmail);
         contactListView = (ListView) findViewById(R.id.listView);
+        contactImageImgView = (ImageView) findViewById(R.id.imgViewContactImage);
         TabHost tabHost = (TabHost) findViewById(R.id.tabHost);
         tabHost.setup();
 
@@ -69,7 +77,7 @@ public class Main extends Activity {
         buttonAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                addContacts(editName.getText().toString(), editNumber.getText().toString(), editEmail.getText().toString());
+                Contacts.add(new Contact(editName.getText().toString(), editNumber.getText().toString(), editEmail.getText().toString(),imageUri));
                 populateList();
                 Toast.makeText(getApplicationContext(), editName.getText().toString() + " has been added!", Toast.LENGTH_SHORT).show();
 
@@ -95,12 +103,22 @@ public class Main extends Activity {
         });
 
 
+        contactImageImgView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent();
+                intent.setType("image/*");
+                intent.setAction(Intent.ACTION_GET_CONTENT);
+                startActivityForResult(Intent.createChooser(intent,"Select Contact Image"), 1);
+            }
+        });
+
 
 
         mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
 
         if (mNfcAdapter == null) {
-            // Stop here, we definitely need NFC
+            // Stop here, we definitely need NFC...thats the whole point
             Toast.makeText(this, "This device doesn't support NFC.", Toast.LENGTH_LONG).show();
             finish();
             return;
@@ -237,13 +255,10 @@ public class Main extends Activity {
 
         private String readText(NdefRecord record) throws UnsupportedEncodingException {
         /*
-         * See NFC forum specification for "Text Record Type Definition" at 3.2.1
-         *
+
          * http://www.nfc-forum.org/specs/
-         *
-         * bit_7 defines encoding
-         * bit_6 reserved for future use, must be 0
-         * bit_5..0 length of IANA language code
+
+         * I don't really get the backend but API documenting is great
          */
 
             byte[] payload = record.getPayload();
@@ -275,23 +290,28 @@ public class Main extends Activity {
                 editNumber.setText(parts[2]);
 
                 Log.w(TAG, parts[0]); // Just the name
-                // "John Doe|johnemail@example.com|1-555-412-1234|555 Elm St., Toronto, ON, M5G 1R8, Canada|jdoe"
+                // "Travis Wu|travisl@clutch.com|1-123-3456|123 Seaseme Street., Narnia, ME, A3e 1s5, Canada|T-Wu"
                 // "Display Name| Email | Phone Number | Address | Photo-Identifier"
+                //my current code does not yet to have Address and Photo included in List-View but could be easily added
 
             }
         }
 
     } // NdefReaderTask
 
+    public void onActivityResult(int reqCode, int resCode, Intent data) {
+        if(resCode == RESULT_OK) {
+            if (reqCode == 1)
+                imageUri = data.getData();
+            contactImageImgView.setImageURI(data.getData());
+        }
+    }
+
     private void populateList() {
         ArrayAdapter<Contact> adapter = new ContactListAdapter();
         contactListView.setAdapter(adapter);
     }
 
-    private void addContacts(String Name, String Number, String Email) {
-        Contacts.add(new Contact(Name, Number, Email));
-
-    }
 
     private class ContactListAdapter extends ArrayAdapter<Contact> {
         public ContactListAdapter() {
@@ -310,6 +330,8 @@ public class Main extends Activity {
             number.setText(currentContact.get_Number());
             TextView email = (TextView) view.findViewById(R.id.contactEmail);
             email.setText(currentContact.get_Email());
+            ImageView ivContactImage = (ImageView) view.findViewById(R.id.ivContactImage);
+            ivContactImage.setImageURI(currentContact.get_imageUri());
 
             return view;
 

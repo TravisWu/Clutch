@@ -3,7 +3,7 @@
     package="com.traviswu.clutch" >
     <uses-sdk
         android:minSdkVersion="10"
-        android:targetSdkVersion="17" />
+        android:targetSdkVersion="20" />
     <uses-permission android:name="android.permission.NFC" />
 
     <uses-feature
